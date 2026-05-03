@@ -1,0 +1,58 @@
+name: Log Progress
+
+on:
+  repository_dispatch:
+    types:
+      - leetcode_solved
+      - coursera_viewed
+      - duolingo_lesson
+      - custom_progress
+
+permissions:
+  contents: write
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write progress log
+        run: |
+          PLATFORM="${{ github.event.client_payload.platform }}"
+          MESSAGE="${{ github.event.client_payload.message }}"
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          DATE=$(date -u +"%Y-%m-%d")
+
+          # Create daily log file
+          LOG_FILE="logs/${DATE}.md"
+          mkdir -p logs
+
+          # Append to daily log
+          echo "" >> "$LOG_FILE"
+          echo "## ${TIMESTAMP}" >> "$LOG_FILE"
+          echo "**Platform:** ${PLATFORM}" >> "$LOG_FILE"
+          echo "**Activity:** ${MESSAGE}" >> "$LOG_FILE"
+
+          # Update README summary
+          echo "# Progress Log" > README.md
+          echo "" >> README.md
+          echo "Last activity: **${MESSAGE}** on **${PLATFORM}**" >> README.md
+          echo "" >> README.md
+          echo "_Updated: ${TIMESTAMP}_" >> README.md
+          echo "" >> README.md
+          echo "## Recent Logs" >> README.md
+          ls logs/ | sort -r | head -7 | while read f; do
+            echo "- [${f%.md}](logs/$f)" >> README.md
+          done
+
+      - name: Commit and push
+        run: |
+          git config user.name "Progress Bot"
+          git config user.email "progress-bot@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "📊 ${{ github.event.client_payload.platform }}: ${{ github.event.client_payload.message }}"
+          git push

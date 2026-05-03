@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progress Push</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --green: #3fb950;
+    --green-dim: #1a4928;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --red: #f85149;
+    --yellow: #d29922;
+  }
+
+  body {
+    width: 340px;
+    min-height: 480px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+  }
+
+  .header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo {
+    width: 28px;
+    height: 28px;
+    background: var(--green);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .header-text p {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-left: auto;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.error { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .status-dot.warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+    font-weight: 500;
+  }
+
+  .tab.active {
+    color: var(--text);
+    border-bottom-color: var(--green);
+  }
+
+  .pane { display: none; padding: 14px; }
+  .pane.active { display: block; }
+
+  /* Settings */
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  input[type=text], input[type=password] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    outline: none;
+    transition: border-color .15s;
+    margin-bottom: 12px;
+  }
+
+  input[type=text]:focus, input[type=password]:focus {
+    border-color: var(--accent);
+  }
+
+  .hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: -10px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 8px;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .btn:hover { background: var(--green); color: #000; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    border-color: var(--border);
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .btn-secondary:hover { color: var(--text); background: var(--surface); }
+
+  /* Manual push */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .platform-btn {
+    padding: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .platform-btn:hover, .platform-btn.selected {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-dim);
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    outline: none;
+    resize: none;
+    height: 60px;
+    transition: border-color .15s;
+    margin-bottom: 10px;
+  }
+
+  textarea:focus { border-color: var(--accent); }
+
+  /* History */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .history-item .platform {
+    font-size: 10px;
+    color: var(--green);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .history-item .msg {
+    font-size: 12px;
+    color: var(--text);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-item .time {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity .2s;
+    pointer-events: none;
+    text-align: center;
+  }
+
+  .toast.show { opacity: 1; }
+  .toast.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+  .toast.error { background: #2d1317; border: 1px solid var(--red); color: var(--red); }
+
+  .empty { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">📊</div>
+  <div class="header-text">
+    <h1>Progress Push</h1>
+    <p>Logging to GitHub</p>
+  </div>
+  <div class="status-dot" id="statusDot"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="history">History</div>
+  <div class="tab" data-tab="manual">Manual</div>
+  <div class="tab" data-tab="settings">Settings</div>
+</div>
+
+<!-- HISTORY -->
+<div class="pane active" id="pane-history">
+  <div class="history-list" id="historyList">
+    <div class="empty">No activity yet.<br>Solve a problem or complete a lesson!</div>
+  </div>
+</div>
+
+<!-- MANUAL PUSH -->
+<div class="pane" id="pane-manual">
+  <label>Platform</label>
+  <div class="platform-grid">
+    <button class="platform-btn selected" data-platform="LeetCode">⚡ LeetCode</button>
+    <button class="platform-btn" data-platform="Coursera">📚 Coursera</button>
+    <button class="platform-btn" data-platform="Duolingo">🦉 Duolingo</button>
+    <button class="platform-btn" data-platform="Other">✨ Other</button>
+  </div>
+  <label>Activity</label>
+  <textarea id="manualMsg" placeholder="e.g. Solved: Binary Search (Easy)"></textarea>
+  <button class="btn" id="manualPushBtn">Push to GitHub →</button>
+</div>
+
+<!-- SETTINGS -->
+<div class="pane" id="pane-settings">
+  <label>GitHub Token</label>
+  <input type="password" id="tokenInput" placeholder="github_pat_...">
+  <p class="hint">Fine-grained token with <strong>Contents: Write</strong> on your progress repo</p>
+
+  <label>GitHub Owner</label>
+  <input type="text" id="ownerInput" placeholder="your-username">
+
+  <label>Repository Name</label>
+  <input type="text" id="repoInput" placeholder="progress-log">
+
+  <button class="btn" id="saveBtn">Save Settings</button>
+  <button class="btn btn-secondary" id="testBtn">Test Connection</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="popup.js"></script>
+</body>
+</html>

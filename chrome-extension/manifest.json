@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Progress Push",
+  "version": "1.0.0",
+  "description": "Automatically logs your learning progress to GitHub contributions",
+  "permissions": [
+    "storage",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://www.coursera.org/*",
+    "https://www.duolingo.com/*",
+    "https://api.github.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*"],
+      "js": ["content/leetcode.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.coursera.org/*"],
+      "js": ["content/coursera.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.duolingo.com/*"],
+      "js": ["content/duolingo.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Progress Push"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
