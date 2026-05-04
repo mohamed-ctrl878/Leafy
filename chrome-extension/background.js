@@ -48,7 +48,6 @@ async function pushToGitHub({ platform, message, eventType }) {
       // Show notification
       chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
         title: '✅ Progress logged!',
         message: `${platform}: ${message}`
       });

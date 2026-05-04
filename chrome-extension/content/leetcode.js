@@ -33,7 +33,12 @@
     return badge ? badge.innerText.trim() : '';
   }
 
+  let isProcessing = false;
+
   async function onSubmissionAccepted() {
+    if (isProcessing) return;
+    isProcessing = true;
+
     const problemName = extractProblemName();
     const storageKey = `pushed_leetcode_${problemName.replace(/\s+/g, '_')}`;
     
@@ -44,6 +49,7 @@
 
     if (lastPushedTime && (now - lastPushedTime < 24 * 60 * 60 * 1000)) {
       console.log('[ProgressPush] Problem already pushed recently:', problemName);
+      isProcessing = false;
       return;
     }
 
@@ -60,10 +66,11 @@
       }
     }, (res) => {
       if (res && res.ok) {
-        // Only mark as pushed if the background script successfully fired the event
         chrome.storage.local.set({ [storageKey]: now });
         console.log('[ProgressPush] LeetCode submission logged:', message);
       }
+      // Release lock after 5 seconds to allow for future submissions but prevent immediate noise
+      setTimeout(() => { isProcessing = false; }, 5000);
     });
   }
 

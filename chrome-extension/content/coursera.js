@@ -20,7 +20,11 @@
     return { courseSlug, lectureTitle };
   }
 
+  let isProcessing = false;
+
   async function pushCourseraEvent(type, detail) {
+    if (isProcessing) return;
+    isProcessing = true;
     const storageKey = `pushed_coursera_${type}_${detail.replace(/[^a-z0-9]/gi, '_')}`;
     
     // Check if already pushed
@@ -52,6 +56,7 @@
         chrome.storage.local.set({ [storageKey]: Date.now() });
         console.log('[ProgressPush] Coursera event logged:', message);
       }
+      setTimeout(() => { isProcessing = false; }, 5000);
     });
   }
 
