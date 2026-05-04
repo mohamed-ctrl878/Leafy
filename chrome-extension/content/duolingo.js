@@ -6,8 +6,6 @@
 (function () {
   'use strict';
 
-  let lastLesson = null;
-
   function getLanguage() {
     // Duolingo stores current language in the page
     const flag = document.querySelector('[data-test="skill-icon"] img, .course-switcher img');
@@ -19,13 +17,20 @@
     return langMatch ? langMatch[1] : alt || 'Language';
   }
 
-  function onLessonComplete() {
-    const now = Date.now();
-    if (lastLesson && now - lastLesson < 30000) return; // 30s debounce
-    lastLesson = now;
-
+  async function onLessonComplete() {
     const language = getLanguage();
+    const storageKey = `pushed_duolingo_${language}`;
     
+    // Check if recently pushed (within last 1 hour)
+    const data = await new Promise(r => chrome.storage.local.get([storageKey], r));
+    const lastPushedTime = data[storageKey];
+    const now = Date.now();
+
+    if (lastPushedTime && (now - lastPushedTime < 60 * 60 * 1000)) {
+       console.log('[ProgressPush] Duolingo lesson already pushed recently for:', language);
+       return;
+    }
+
     // Try to get XP earned
     const xpEl = document.querySelector(
       '[data-test="xp-earned"], .e_2XOc, [class*="xpEarned"]'
@@ -42,9 +47,12 @@
         message,
         eventType: 'duolingo_lesson'
       }
+    }, (res) => {
+      if (res && res.ok) {
+        chrome.storage.local.set({ [storageKey]: now });
+        console.log('[ProgressPush] Duolingo lesson logged:', message);
+      }
     });
-
-    console.log('[ProgressPush] Duolingo lesson logged:', message);
   }
 
   // Watch for lesson completion screen

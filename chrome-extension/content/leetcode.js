@@ -6,10 +6,7 @@
 (function () {
   'use strict';
 
-  let lastPushed = null;
-
   function extractProblemName() {
-    // LeetCode problem title selectors (may change with site updates)
     const selectors = [
       '[data-cy="question-title"]',
       '.mr-2.text-lg',
@@ -19,11 +16,9 @@
       const el = document.querySelector(sel);
       if (el) {
         const text = el.innerText || el.textContent;
-        // Remove "- LeetCode" suffix from title tag
         return text.replace(/\s*-\s*LeetCode\s*$/, '').trim();
       }
     }
-    // Fallback: extract from URL  /problems/two-sum/
     const match = location.pathname.match(/\/problems\/([^/]+)/);
     if (match) return match[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     return 'Unknown Problem';
@@ -38,14 +33,21 @@
     return badge ? badge.innerText.trim() : '';
   }
 
-  function onSubmissionAccepted() {
+  async function onSubmissionAccepted() {
     const problemName = extractProblemName();
+    const storageKey = `pushed_leetcode_${problemName.replace(/\s+/g, '_')}`;
+    
+    // Check if recently pushed (within last 24 hours)
+    const data = await new Promise(r => chrome.storage.local.get([storageKey], r));
+    const lastPushedTime = data[storageKey];
+    const now = Date.now();
+
+    if (lastPushedTime && (now - lastPushedTime < 24 * 60 * 60 * 1000)) {
+      console.log('[ProgressPush] Problem already pushed recently:', problemName);
+      return;
+    }
+
     const difficulty = extractDifficulty();
-    const key = `${problemName}-${Date.now()}`;
-
-    if (lastPushed === problemName) return; // debounce same problem
-    lastPushed = problemName;
-
     const diffText = difficulty ? ` (${difficulty})` : '';
     const message = `Solved: ${problemName}${diffText}`;
 
@@ -56,30 +58,25 @@
         message,
         eventType: 'leetcode_solved'
       }
+    }, (res) => {
+      if (res && res.ok) {
+        // Only mark as pushed if the background script successfully fired the event
+        chrome.storage.local.set({ [storageKey]: now });
+        console.log('[ProgressPush] LeetCode submission logged:', message);
+      }
     });
-
-    console.log('[ProgressPush] LeetCode submission logged:', message);
-
-    // Reset debounce after 5 minutes
-    setTimeout(() => { lastPushed = null; }, 5 * 60 * 1000);
   }
 
   // Watch for the "Accepted" result in the submission panel
-  // LeetCode uses a React SPA, so we use MutationObserver
   const observer = new MutationObserver(() => {
-    // Check for accepted verdict indicators
-    const accepted = document.querySelector(
-      '[data-e2e-locator="submission-result"]'
-    );
+    const accepted = document.querySelector('[data-e2e-locator="submission-result"]');
     if (accepted && /accepted/i.test(accepted.textContent)) {
       onSubmissionAccepted();
     }
 
-    // Alternative: check for green checkmark in results area
     const successIcon = document.querySelector('.success__3Ai7');
     if (successIcon) onSubmissionAccepted();
 
-    // URL-based: /submissions/detail/{id}/ with accepted state
     if (location.pathname.includes('/submissions/detail/')) {
       const verdict = document.querySelector('.status-accepted');
       if (verdict) onSubmissionAccepted();

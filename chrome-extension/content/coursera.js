@@ -6,8 +6,6 @@
 (function () {
   'use strict';
 
-  let loggedItems = new Set();
-
   function getCourseInfo() {
     // Extract from URL: /learn/{course-slug}/
     const match = location.pathname.match(/\/learn\/([^/]+)/);
@@ -22,10 +20,12 @@
     return { courseSlug, lectureTitle };
   }
 
-  function pushCourseraEvent(type, detail) {
-    const key = `${type}-${detail}`;
-    if (loggedItems.has(key)) return;
-    loggedItems.add(key);
+  async function pushCourseraEvent(type, detail) {
+    const storageKey = `pushed_coursera_${type}_${detail.replace(/[^a-z0-9]/gi, '_')}`;
+    
+    // Check if already pushed
+    const data = await new Promise(r => chrome.storage.local.get([storageKey], r));
+    if (data[storageKey]) return;
 
     const { courseSlug, lectureTitle } = getCourseInfo();
     let message;
@@ -47,9 +47,12 @@
         message,
         eventType: 'coursera_viewed'
       }
+    }, (res) => {
+      if (res && res.ok) {
+        chrome.storage.local.set({ [storageKey]: Date.now() });
+        console.log('[ProgressPush] Coursera event logged:', message);
+      }
     });
-
-    console.log('[ProgressPush] Coursera event logged:', message);
   }
 
   // 1. Watch for video completion (Coursera marks video items as "complete")
