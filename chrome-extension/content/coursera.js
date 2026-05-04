@@ -20,16 +20,23 @@
     return { courseSlug, lectureTitle };
   }
 
+  let lastPushedId = null;
   let isProcessing = false;
 
   async function pushCourseraEvent(type, detail) {
-    if (isProcessing) return;
+    const key = `${type}-${detail}`;
+    if (lastPushedId === key || isProcessing) return;
     isProcessing = true;
+
     const storageKey = `pushed_coursera_${type}_${detail.replace(/[^a-z0-9]/gi, '_')}`;
     
     // Check if already pushed
     const data = await new Promise(r => chrome.storage.local.get([storageKey], r));
-    if (data[storageKey]) return;
+    if (data[storageKey]) {
+      lastPushedId = key;
+      isProcessing = false;
+      return;
+    }
 
     const { courseSlug, lectureTitle } = getCourseInfo();
     let message;
@@ -52,11 +59,12 @@
         eventType: 'coursera_viewed'
       }
     }, (res) => {
+      isProcessing = false;
       if (res && res.ok) {
+        lastPushedId = key;
         chrome.storage.local.set({ [storageKey]: Date.now() });
         console.log('[ProgressPush] Coursera event logged:', message);
       }
-      setTimeout(() => { isProcessing = false; }, 5000);
     });
   }
 

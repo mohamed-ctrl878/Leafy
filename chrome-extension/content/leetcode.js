@@ -33,22 +33,27 @@
     return badge ? badge.innerText.trim() : '';
   }
 
+  let lastPushedProblemId = null;
   let isProcessing = false;
 
   async function onSubmissionAccepted() {
-    if (isProcessing) return;
+    const problemName = extractProblemName();
+    
+    // Hard Lock: If we already pushed this exact problem in this session, STOP.
+    if (lastPushedProblemId === problemName || isProcessing) return;
+    
     isProcessing = true;
 
-    const problemName = extractProblemName();
     const storageKey = `pushed_leetcode_${problemName.replace(/\s+/g, '_')}`;
     
-    // Check if recently pushed (within last 24 hours)
+    // Check if recently pushed in local storage (24h limit)
     const data = await new Promise(r => chrome.storage.local.get([storageKey], r));
     const lastPushedTime = data[storageKey];
     const now = Date.now();
 
     if (lastPushedTime && (now - lastPushedTime < 24 * 60 * 60 * 1000)) {
       console.log('[ProgressPush] Problem already pushed recently:', problemName);
+      lastPushedProblemId = problemName; // Mark as pushed even if from previous session
       isProcessing = false;
       return;
     }
@@ -65,12 +70,12 @@
         eventType: 'leetcode_solved'
       }
     }, (res) => {
+      isProcessing = false;
       if (res && res.ok) {
+        lastPushedProblemId = problemName; // Lock this problem for the session
         chrome.storage.local.set({ [storageKey]: now });
-        console.log('[ProgressPush] LeetCode submission logged:', message);
+        console.log('[ProgressPush] LeetCode submission logged successfully:', message);
       }
-      // Release lock after 5 seconds to allow for future submissions but prevent immediate noise
-      setTimeout(() => { isProcessing = false; }, 5000);
     });
   }
 

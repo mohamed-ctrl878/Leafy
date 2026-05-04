@@ -17,13 +17,14 @@
     return langMatch ? langMatch[1] : alt || 'Language';
   }
 
+  let lastPushedLanguage = null;
   let isProcessing = false;
 
   async function onLessonComplete() {
-    if (isProcessing) return;
+    const language = getLanguage();
+    if (lastPushedLanguage === language || isProcessing) return;
     isProcessing = true;
 
-    const language = getLanguage();
     const storageKey = `pushed_duolingo_${language}`;
     
     // Check if recently pushed (within last 1 hour)
@@ -33,6 +34,7 @@
 
     if (lastPushedTime && (now - lastPushedTime < 60 * 60 * 1000)) {
        console.log('[ProgressPush] Duolingo lesson already pushed recently for:', language);
+       lastPushedLanguage = language;
        isProcessing = false;
        return;
     }
@@ -54,11 +56,12 @@
         eventType: 'duolingo_lesson'
       }
     }, (res) => {
+      isProcessing = false;
       if (res && res.ok) {
+        lastPushedLanguage = language;
         chrome.storage.local.set({ [storageKey]: now });
         console.log('[ProgressPush] Duolingo lesson logged:', message);
       }
-      setTimeout(() => { isProcessing = false; }, 10000); // Duolingo animations are slow
     });
   }
 
