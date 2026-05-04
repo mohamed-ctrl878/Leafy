@@ -82,6 +82,26 @@ document.getElementById('testBtn').addEventListener('click', async () => {
   btn.textContent = 'Test Connection';
 });
 
+// ---- Init repository ----
+document.getElementById('initBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('initBtn');
+  btn.disabled = true;
+  btn.textContent = 'Initializing...';
+
+  chrome.runtime.sendMessage({ type: 'SETUP_REPO' }, (res) => {
+    if (res && res.ok) {
+      showToast('Repository setup successfully! 🎉');
+      setStatus('ok');
+    } else {
+      const err = res ? res.error : 'Unknown error';
+      showToast(`Setup failed: ${err}`, 'error');
+      setStatus('error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Init Repository (Auto-Setup)';
+  });
+});
+
 // ---- Manual push ----
 let selectedPlatform = 'LeetCode';
 
