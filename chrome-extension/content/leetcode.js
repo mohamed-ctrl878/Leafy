@@ -62,6 +62,9 @@
     const diffText = difficulty ? ` (${difficulty})` : '';
     const message = `Solved: ${problemName}${diffText}`;
 
+    // Safety timeout to release lock if something goes wrong with the message
+    const safetyTimeout = setTimeout(() => { isProcessing = false; }, 30000);
+
     chrome.runtime.sendMessage({
       type: 'PUSH_PROGRESS',
       payload: {
@@ -70,11 +73,14 @@
         eventType: 'leetcode_solved'
       }
     }, (res) => {
+      clearTimeout(safetyTimeout);
       isProcessing = false;
       if (res && res.ok) {
         lastPushedProblemId = problemName; // Lock this problem for the session
         chrome.storage.local.set({ [storageKey]: now });
         console.log('[ProgressPush] LeetCode submission logged successfully:', message);
+      } else {
+        console.warn('[ProgressPush] Push failed:', res ? res.error : 'Unknown error');
       }
     });
   }
