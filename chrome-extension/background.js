@@ -38,11 +38,18 @@ async function pushToGitHub({ platform, message, eventType }) {
     });
 
     if (res.status === 204) {
-      // Log to local history
+      // Log to local history (with duplicate check)
       const entry = { platform, message, timestamp: Date.now() };
       chrome.storage.local.get({ history: [] }, ({ history }) => {
-        history.unshift(entry);
-        chrome.storage.local.set({ history: history.slice(0, 100) });
+        const isDuplicate = history.length > 0 && 
+                           history[0].platform === platform && 
+                           history[0].message === message &&
+                           (Date.now() - history[0].timestamp < 600000); // 10 min window
+
+        if (!isDuplicate) {
+          history.unshift(entry);
+          chrome.storage.local.set({ history: history.slice(0, 100) });
+        }
       });
 
       // Show notification
