@@ -5,92 +5,102 @@
 
 (function () {
   'use strict';
+  console.log('[ProgressPush] Duolingo script loaded');
 
   function getLanguage() {
-    // Duolingo stores current language in the page
     const flag = document.querySelector('[data-test="skill-icon"] img, .course-switcher img');
     const alt = flag ? flag.alt : '';
-
-    // Try to extract from URL or page title
     const title = document.title;
     const langMatch = title.match(/Learn (\w+)/i);
     return langMatch ? langMatch[1] : alt || 'Language';
   }
 
-  let lastPushedLanguage = null;
+  let lastPushedTimeSession = 0;
   let isProcessing = false;
 
   async function onLessonComplete() {
-    const language = getLanguage();
-    if (lastPushedLanguage === language || isProcessing) return;
+    console.log('[ProgressPush] onLessonComplete triggered');
+    if (isProcessing) return;
+    
+    const now = Date.now();
+    if (now - lastPushedTimeSession < 30000) {
+      console.log('[ProgressPush] Session debounce active, skipping');
+      return;
+    }
+    
     isProcessing = true;
-
+    const language = getLanguage();
     const storageKey = `pushed_duolingo_${language}`;
     
-    // Check if recently pushed (within last 1 hour)
     const data = await new Promise(r => chrome.storage.local.get([storageKey], r));
-    const lastPushedTime = data[storageKey];
-    const now = Date.now();
+    const lastPushedTimeGlobal = data[storageKey];
 
-    if (lastPushedTime && (now - lastPushedTime < 60 * 60 * 1000)) {
-       console.log('[ProgressPush] Duolingo lesson already pushed recently for:', language);
-       lastPushedLanguage = language;
+    if (lastPushedTimeGlobal && (now - lastPushedTimeGlobal < 5 * 60 * 1000)) {
+       console.log('[ProgressPush] Global debounce active (5m), skipping');
        isProcessing = false;
        return;
     }
 
-    // Try to get XP earned
-    const xpEl = document.querySelector(
-      '[data-test="xp-earned"], .e_2XOc, [class*="xpEarned"]'
-    );
+    const xpEl = document.querySelector('[data-test="xp-earned"], .e_2XOc, [class*="xpEarned"], [class*="xp-text"]');
     const xp = xpEl ? xpEl.innerText.trim() : '';
-    const xpText = xp ? ` (+${xp} XP)` : '';
+    const message = `Completed ${language} lesson ${xp ? `(+${xp} XP)` : ''}`;
 
-    const message = `Completed ${language} lesson${xpText}`;
+    console.log('[ProgressPush] Sending message to background:', message);
 
     chrome.runtime.sendMessage({
       type: 'PUSH_PROGRESS',
-      payload: {
-        platform: 'Duolingo',
-        message,
-        eventType: 'duolingo_lesson'
-      }
+      payload: { platform: 'Duolingo', message, eventType: 'duolingo_lesson' }
     }, (res) => {
       isProcessing = false;
       if (res && res.ok) {
-        lastPushedLanguage = language;
-        chrome.storage.local.set({ [storageKey]: now });
-        console.log('[ProgressPush] Duolingo lesson logged:', message);
+        lastPushedTimeSession = Date.now();
+        chrome.storage.local.set({ [storageKey]: Date.now() });
+        console.log('[ProgressPush] Success: Lesson logged');
+      } else {
+        console.error('[ProgressPush] Failed to log:', res ? res.error : 'Unknown');
       }
     });
   }
 
   // Watch for lesson completion screen
   const observer = new MutationObserver(() => {
-    // Duolingo shows a celebration screen after each lesson
+    // 1. Check for end-of-lesson specific screens or results
     const celebration = document.querySelector(
-      '[data-test="lesson-complete"], .VEbBC, [class*="lessonComplete"]'
+      '[data-test="lesson-complete"], [data-test="xp-summary"], [data-test="streak-extended"], [data-test="practice-complete"], [data-test="plus-ad-video-player"]'
     );
-    if (celebration) onLessonComplete();
+    
+    // 2. Search for common completion text in any heading or button
+    const bodyText = document.body.innerText;
+    const completionPhrases = [
+      'Lesson Complete', 'Great job', 'Lesson finished', 'XP earned', 'Daily Goal',
+      'أحسنت', 'اكتمل الدرس', 'تم إكمال الهدف', 'نقطة خبرة'
+    ];
+    const hasPhrase = completionPhrases.some(phrase => bodyText.includes(phrase));
 
-    // Also check for streak/XP update which fires after lesson
-    const streakUpdate = document.querySelector('[data-test="streak-extended"]');
-    if (streakUpdate) onLessonComplete();
+    // 3. More aggressive detection: If we see "Continue" or "Next" on a page that isn't a question
+    const isSession = location.pathname.includes('/session');
+    const hasNextBtn = !!document.querySelector('[data-test="player-next"]');
+    
+    if (celebration || (hasPhrase && !isSession)) {
+      console.log('[ProgressPush] Potential match found! Celebration:', !!celebration, 'Phrase:', hasPhrase);
+      onLessonComplete();
+    }
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
   // Watch for navigation to /learn after a lesson (SPA)
   let lastPath = location.pathname;
-  new MutationObserver(() => {
+  setInterval(() => {
     if (location.pathname !== lastPath) {
       const prev = lastPath;
       lastPath = location.pathname;
+      console.log('[ProgressPush] URL changed from', prev, 'to', lastPath);
 
-      // Going from /session to /learn = lesson complete
-      if (prev.includes('/session') && location.pathname === '/learn') {
-        setTimeout(onLessonComplete, 1000);
+      if (prev.includes('/session') && !location.pathname.includes('/session')) {
+        console.log('[ProgressPush] Session ended, triggering check');
+        setTimeout(onLessonComplete, 2000);
       }
     }
-  }).observe(document, { subtree: true, childList: true });
+  }, 1000);
 })();

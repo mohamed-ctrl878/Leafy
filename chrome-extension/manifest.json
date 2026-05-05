@@ -11,7 +11,7 @@
   "host_permissions": [
     "https://leetcode.com/*",
     "https://www.coursera.org/*",
-    "https://www.duolingo.com/*",
+    "https://*.duolingo.com/*",
     "https://api.github.com/*"
   ],
   "background": {
@@ -29,7 +29,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.duolingo.com/*"],
+      "matches": ["https://*.duolingo.com/*"],
       "js": ["content/duolingo.js"],
       "run_at": "document_idle"
     }
