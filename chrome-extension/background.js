@@ -55,7 +55,7 @@ async function pushToGitHub({ platform, message, eventType }) {
       // Show notification
       chrome.notifications.create({
         type: 'basic',
-        title: '✅ Progress logged!',
+        title: 'Progress logged!',
         message: `${platform}: ${message}`
       });
 

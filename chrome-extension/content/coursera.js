@@ -41,7 +41,7 @@
       } else if (type === 'quiz') {
         message = `Passed quiz in ${courseSlug}`;
       } else if (type === 'course_complete') {
-        message = `🎉 Completed the entire course: ${courseSlug}!`;
+        message = `Completed the entire course: ${courseSlug}!`;
       }
 
       chrome.runtime.sendMessage({

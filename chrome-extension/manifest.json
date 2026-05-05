@@ -3,6 +3,12 @@
   "name": "Progress Push",
   "version": "1.0.0",
   "description": "Automatically logs your learning progress to GitHub contributions",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "progress-push@your-domain.com",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": [
     "storage",
     "notifications",
@@ -15,7 +21,8 @@
     "https://api.github.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -36,6 +43,13 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Progress Push"
+    "default_title": "Progress Push",
+    "default_icon": "app_icon_v2.png"
+  },
+  "icons": {
+    "16": "app_icon_v2.png",
+    "32": "app_icon_v2.png",
+    "48": "app_icon_v2.png",
+    "128": "app_icon_v2.png"
   }
 }
