@@ -1,0 +1,33 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if used in future)
+node_modules/
+package-lock.json
+npm-debug.log
+
+# Build artifacts
+dist/
+build/
+*.zip
+
+# Environment
+.env
+.env.local
+
+# Chrome extension packaging
+*.crx
+*.pem
+
+# Temporary files
+*.tmp
+*.bak
