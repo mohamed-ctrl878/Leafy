@@ -80,6 +80,11 @@ on:
       - leetcode_solved
       - coursera_viewed
       - duolingo_lesson
+      - hackerrank_solved
+      - codeforces_solved
+      - edx_completed
+      - udemy_completed
+      - youtube_watched
       - custom_progress
 
 permissions:
@@ -179,8 +184,11 @@ async function setupRepository() {
 }
 
 // Listen for messages from content scripts and popup
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.log('[ProgressPush] Background received message:', msg.type, 'from:', sender.url);
+  
   if (msg.type === 'PUSH_PROGRESS') {
+    console.log('[ProgressPush] Processing PUSH_PROGRESS for', msg.payload.platform);
     pushToGitHub(msg.payload).then(sendResponse);
     return true; // keep channel open for async
   }

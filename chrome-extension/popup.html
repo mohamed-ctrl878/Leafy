@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Progress Push</title>
+<title>Leafy</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;500;600&display=swap');
 
@@ -318,6 +318,55 @@
     font-size: 12px;
   }
   .add-platform-trigger:hover { border-color: var(--green); color: var(--green); }
+
+  .yt-channel-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .yt-channel-item:hover { border-color: var(--red); }
+
+  .yt-section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .yt-section label {
+    color: #ff4444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .yt-hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .yt-add-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .yt-add-row input {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .yt-add-row button {
+    width: auto;
+    padding: 7px 14px;
+    font-size: 11px;
+  }
 </style>
 </head>
 <body>
@@ -325,7 +374,7 @@
 <div class="header">
   <div class="logo"><img src="app_icon_v2.png" alt="Logo"></div>
   <div class="header-text">
-    <h1>Progress Push</h1>
+    <h1>Leafy</h1>
     <p>Logging to GitHub</p>
   </div>
   <div class="status-dot" id="statusDot"></div>
@@ -398,7 +447,17 @@
       </div>
     </div>
 
-  <button id="saveConfig" class="btn">Save Configuration</button>
+    <div class="yt-section">
+      <label>▶ YouTube Tech Channels</label>
+      <p class="yt-hint">Add YouTube channel handles you want to track. Only videos from these channels will be logged. The channel name will appear in the commit message.</p>
+      <div class="yt-add-row">
+        <input type="text" id="ytChannelInput" placeholder="@Fireship">
+        <button class="btn" id="ytAddChannelBtn">Add</button>
+      </div>
+      <div id="ytChannelList"></div>
+    </div>
+
+  <button id="saveConfig" class="btn" style="margin-top: 14px;">Save Configuration</button>
   <button class="btn btn-secondary" id="initBtn">Init Repository (Auto-Setup)</button>
   <button class="btn btn-secondary" id="testBtn">Test Connection</button>
 </div>
