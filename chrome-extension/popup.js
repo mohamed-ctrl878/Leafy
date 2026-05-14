@@ -24,13 +24,17 @@ function setStatus(state) {
 }
 
 // ---- Load settings ----
-chrome.storage.sync.get(['github_token', 'github_owner', 'github_repo', 'custom_platforms'], (cfg) => {
+chrome.storage.sync.get(['github_token', 'github_owner', 'github_repo', 'custom_platforms', 'youtube_channels'], (cfg) => {
   if (cfg.github_token) document.getElementById('tokenInput').value = cfg.github_token;
   if (cfg.github_owner) document.getElementById('ownerInput').value = cfg.github_owner;
   if (cfg.github_repo)  document.getElementById('repoInput').value  = cfg.github_repo;
   
   const customPlatforms = cfg.custom_platforms || [];
   renderCustomPlatforms(customPlatforms);
+  
+  const ytChannels = cfg.youtube_channels || [];
+  renderYouTubeChannels(ytChannels);
+  
   setStatus(cfg.github_token ? 'ok' : 'warn');
 });
 
@@ -113,13 +117,18 @@ function renderCustomPlatforms(platforms) {
   const grid = document.getElementById('platformGrid');
   
   // Clear lists
-  managementList.innerHTML = '';
-  grid.innerHTML = '';
+  managementList.textContent = '';
+  grid.textContent = '';
 
   const automated = [
     { id: 'LeetCode', name: 'LeetCode' },
     { id: 'Coursera', name: 'Coursera' },
-    { id: 'Duolingo', name: 'Duolingo' }
+    { id: 'Duolingo', name: 'Duolingo' },
+    { id: 'HackerRank', name: 'HackerRank' },
+    { id: 'Codeforces', name: 'Codeforces' },
+    { id: 'edX', name: 'edX' },
+    { id: 'Udemy', name: 'Udemy' },
+    { id: 'YouTube', name: 'YouTube' }
   ];
 
   // 1. Render for Manual Tab (Grid)
@@ -135,11 +144,24 @@ function renderCustomPlatforms(platforms) {
     const item = document.createElement('div');
     item.className = 'platform-card';
     item.style.cursor = 'default';
-    item.innerHTML = `
-      <span>${p}</span>
-      <span class="badge manual">Manual</span>
-      <span style="cursor:pointer; color:var(--red); font-size:18px; margin-left:10px;" data-name="${p}">×</span>
-    `;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = p;
+    
+    const badgeSpan = document.createElement('span');
+    badgeSpan.className = 'badge manual';
+    badgeSpan.textContent = 'Manual';
+    
+    const closeSpan = document.createElement('span');
+    closeSpan.style.cursor = 'pointer';
+    closeSpan.style.color = 'var(--red)';
+    closeSpan.style.fontSize = '18px';
+    closeSpan.style.marginLeft = '10px';
+    closeSpan.setAttribute('data-name', p);
+    closeSpan.textContent = '×';
+    
+    item.appendChild(nameSpan);
+    item.appendChild(badgeSpan);
+    item.appendChild(closeSpan);
     item.querySelector('span:last-child').onclick = () => removePlatform(p);
     managementList.appendChild(item);
   });
@@ -148,10 +170,16 @@ function renderCustomPlatforms(platforms) {
 function createPlatformCard(id, name, isAuto) {
   const div = document.createElement('div');
   div.className = `platform-card ${currentSelectedPlatform === id ? 'selected' : ''}`;
-  div.innerHTML = `
-    <span>${name}</span>
-    ${isAuto ? '<span class="badge auto">Automated</span>' : ''}
-  `;
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = name;
+  div.appendChild(nameSpan);
+  
+  if (isAuto) {
+    const badgeSpan = document.createElement('span');
+    badgeSpan.className = 'badge auto';
+    badgeSpan.textContent = 'Automated';
+    div.appendChild(badgeSpan);
+  }
   div.onclick = () => {
     currentSelectedPlatform = id;
     document.querySelectorAll('#platformGrid .platform-card').forEach(c => c.classList.remove('selected'));
@@ -246,18 +274,110 @@ function timeAgo(ts) {
 function loadHistory() {
   chrome.storage.local.get({ history: [] }, ({ history }) => {
     const list = document.getElementById('historyList');
+    list.textContent = '';
     if (!history.length) {
-      list.innerHTML = '<div class="empty">No activity yet.<br>Solve a problem or complete a lesson!</div>';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'empty';
+      emptyDiv.appendChild(document.createTextNode('No activity yet.'));
+      emptyDiv.appendChild(document.createElement('br'));
+      emptyDiv.appendChild(document.createTextNode('Solve a problem or complete a lesson!'));
+      list.appendChild(emptyDiv);
       return;
     }
-    list.innerHTML = history.slice(0, 15).map(e => `
-      <div class="history-item">
-        <div class="platform">${e.platform}</div>
-        <div class="msg">${e.message}</div>
-        <div class="time">${timeAgo(e.timestamp)}</div>
-      </div>
-    `).join('');
+    
+    history.slice(0, 15).forEach(e => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'history-item';
+      
+      const pDiv = document.createElement('div');
+      pDiv.className = 'platform';
+      pDiv.textContent = e.platform;
+      
+      const mDiv = document.createElement('div');
+      mDiv.className = 'msg';
+      mDiv.textContent = e.message;
+      
+      const tDiv = document.createElement('div');
+      tDiv.className = 'time';
+      tDiv.textContent = timeAgo(e.timestamp);
+      
+      itemDiv.appendChild(pDiv);
+      itemDiv.appendChild(mDiv);
+      itemDiv.appendChild(tDiv);
+      list.appendChild(itemDiv);
+    });
   });
 }
 
 loadHistory();
+
+// ---- YouTube Channel Management ----
+function renderYouTubeChannels(channels) {
+  const list = document.getElementById('ytChannelList');
+  if (!list) return;
+  list.textContent = '';
+
+  if (channels.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.style.cssText = 'font-size: 11px; color: var(--muted); text-align: center; padding: 8px;';
+    emptyDiv.textContent = 'No channels added yet. Add a YouTube channel handle to start tracking.';
+    list.appendChild(emptyDiv);
+    return;
+  }
+
+  channels.forEach(ch => {
+    const item = document.createElement('div');
+    item.className = 'yt-channel-item';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `@${ch.replace(/^@/, '')}`;
+    nameSpan.style.cssText = 'flex: 1; font-family: "JetBrains Mono", monospace; font-size: 12px;';
+
+    const removeBtn = document.createElement('span');
+    removeBtn.textContent = '×';
+    removeBtn.style.cssText = 'cursor: pointer; color: var(--red); font-size: 18px; padding: 0 4px;';
+    removeBtn.onclick = () => removeYouTubeChannel(ch);
+
+    item.appendChild(nameSpan);
+    item.appendChild(removeBtn);
+    list.appendChild(item);
+  });
+}
+
+async function addYouTubeChannel() {
+  const input = document.getElementById('ytChannelInput');
+  let name = input.value.trim().replace(/^@/, '');
+  if (!name) return;
+
+  const data = await chrome.storage.sync.get({ youtube_channels: [] });
+  const existing = data.youtube_channels.map(c => c.toLowerCase());
+  if (existing.includes(name.toLowerCase())) {
+    showToast('Channel already added', 'error');
+    return;
+  }
+
+  const newList = [...data.youtube_channels, name];
+  await chrome.storage.sync.set({ youtube_channels: newList });
+  input.value = '';
+  renderYouTubeChannels(newList);
+  showToast(`@${name} added ✓`);
+}
+
+async function removeYouTubeChannel(name) {
+  const data = await chrome.storage.sync.get({ youtube_channels: [] });
+  const newList = data.youtube_channels.filter(c => c.toLowerCase() !== name.toLowerCase());
+  await chrome.storage.sync.set({ youtube_channels: newList });
+  renderYouTubeChannels(newList);
+  showToast(`@${name} removed`);
+}
+
+// YouTube channel UI events
+const ytAddBtn = document.getElementById('ytAddChannelBtn');
+if (ytAddBtn) ytAddBtn.onclick = addYouTubeChannel;
+
+const ytInput = document.getElementById('ytChannelInput');
+if (ytInput) {
+  ytInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addYouTubeChannel();
+  });
+}
